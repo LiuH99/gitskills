@@ -23,7 +23,8 @@ import androidx.databinding.DataBindingUtil;
 import androidx.databinding.ObservableField;
 import androidx.fragment.app.DialogFragment;
 
-import com.bigkoo.pickerview.TimePickerView;
+import android.app.DatePickerDialog;
+import android.widget.DatePicker;
 import com.wshuttle.trailerplatform.R;
 import com.wshuttle.trailerplatform.amap.util.ToastUtil;
 import com.wshuttle.trailerplatform.databinding.DialogMyOrderFilterBinding;
@@ -74,7 +75,7 @@ public class OrderFilterDialog extends DialogFragment implements View.OnClickLis
     /**
      * 时间选择相关
      */
-    private TimePickerView pvTime = null;
+    private DatePickerDialog datePickerDialog = null;
 
     public interface OnFilterListener {
         void onFilterApplied(String driver, String customer, String dispatchStatus, long startTime, long endTime);
@@ -251,71 +252,74 @@ public class OrderFilterDialog extends DialogFragment implements View.OnClickLis
      */
     private void showTimePicker(Date date, boolean isStartTime) {
         // 创建 Calendar 实例并设置默认时间
-        Calendar selectedDate = Calendar.getInstance();
-        selectedDate.setTime(date);
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
         
-        // 设置时间选择器的范围（可根据需要调整）
-        Calendar startDate = Calendar.getInstance();
-        startDate.set(2020, 0, 1); // 起始年份 2020
+        int year = calendar.get(Calendar.YEAR);
+        int month = calendar.get(Calendar.MONTH);
+        int dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH);
         
-        Calendar endDate = Calendar.getInstance();
-        endDate.set(2030, 11, 31); // 结束年份 2030
-        
-        // 创建时间选择器
-        pvTime = new TimePickerView.Builder(getContext(), new TimePickerView.OnTimeSelectListener() {
-            @Override
-            public void onTimeSelect(Date selectedTime, View v) {
-                Calendar calendar = Calendar.getInstance();
-                calendar.setTime(selectedTime);
-                
-                if (isStartTime) {
-                    // 开始时间：设置时分秒为 00:00:00
-                    calendar.set(Calendar.HOUR_OF_DAY, 0);
-                    calendar.set(Calendar.MINUTE, 0);
-                    calendar.set(Calendar.SECOND, 0);
-                    calendar.set(Calendar.MILLISECOND, 0);
+        // 创建日期选择器对话框
+        datePickerDialog = new DatePickerDialog(
+            getContext(),
+            new DatePickerDialog.OnDateSetListener() {
+                @Override
+                public void onDateSet(DatePicker view, int selectedYear, int selectedMonth, int selectedDay) {
+                    // 创建选择的日期
+                    Calendar selectedCalendar = Calendar.getInstance();
+                    selectedCalendar.set(Calendar.YEAR, selectedYear);
+                    selectedCalendar.set(Calendar.MONTH, selectedMonth);
+                    selectedCalendar.set(Calendar.DAY_OF_MONTH, selectedDay);
                     
-                    startTime = calendar.getTimeInMillis();
-                    showStartTime = StringUtils.formatDate(new Date(startTime), "yyyy-MM-dd");
-                    
-                    // 更新开始时间按钮文本
-                    binding.btnStartTime.setText(showStartTime);
-                    
-                    LogUtils.d("OrderFilterDialog", "选择开始时间: " + showStartTime);
-                } else {
-                    // 结束时间：设置时分秒为 23:59:59
-                    calendar.set(Calendar.HOUR_OF_DAY, 23);
-                    calendar.set(Calendar.MINUTE, 59);
-                    calendar.set(Calendar.SECOND, 59);
-                    calendar.set(Calendar.MILLISECOND, 999);
-                    
-                    endTime = calendar.getTimeInMillis();
-                    showEndTime = StringUtils.formatDate(new Date(endTime), "yyyy-MM-dd");
-                    
-                    // 更新结束时间按钮文本
-                    binding.btnEndTime.setText(showEndTime);
-                    
-                    LogUtils.d("OrderFilterDialog", "选择结束时间: " + showEndTime);
+                    if (isStartTime) {
+                        // 开始时间：设置时分秒为 00:00:00
+                        selectedCalendar.set(Calendar.HOUR_OF_DAY, 0);
+                        selectedCalendar.set(Calendar.MINUTE, 0);
+                        selectedCalendar.set(Calendar.SECOND, 0);
+                        selectedCalendar.set(Calendar.MILLISECOND, 0);
+                        
+                        startTime = selectedCalendar.getTimeInMillis();
+                        showStartTime = StringUtils.formatDate(new Date(startTime), "yyyy-MM-dd");
+                        
+                        // 更新开始时间按钮文本
+                        binding.btnStartTime.setText(showStartTime);
+                        
+                        LogUtils.d("OrderFilterDialog", "选择开始时间: " + showStartTime + " (时间戳: " + startTime + ")");
+                        
+                    } else {
+                        // 结束时间：设置时分秒为 23:59:59
+                        selectedCalendar.set(Calendar.HOUR_OF_DAY, 23);
+                        selectedCalendar.set(Calendar.MINUTE, 59);
+                        selectedCalendar.set(Calendar.SECOND, 59);
+                        selectedCalendar.set(Calendar.MILLISECOND, 999);
+                        
+                        endTime = selectedCalendar.getTimeInMillis();
+                        showEndTime = StringUtils.formatDate(new Date(endTime), "yyyy-MM-dd");
+                        
+                        // 更新结束时间按钮文本
+                        binding.btnEndTime.setText(showEndTime);
+                        
+                        LogUtils.d("OrderFilterDialog", "选择结束时间: " + showEndTime + " (时间戳: " + endTime + ")");
+                    }
                 }
-            }
-        })
-        .setType(new boolean[]{true, true, true, false, false, false}) // 只显示年月日，不显示时分秒
-        .setCancelText("取消")
-        .setSubmitText("确定")
-        .setTitleSize(18)
-        .setSubCalSize(16)
-        .setContentTextSize(16)
-        .setDate(selectedDate) // 设置默认选中时间
-        .setRangDate(startDate, endDate) // 设置时间范围
-        .setBackgroundId(0x00000000) // 设置外部遮罩颜色
-        .setDecorView(null)
-        .isCenterLabel(false) // 是否只显示中间选中项的label文字，false则每项item全部都带有label。
-        .isDialog(true) // 是否显示为对话框样式
-        .build();
+            },
+            year,  // 默认年份
+            month, // 默认月份
+            dayOfMonth // 默认日期
+        );
         
-        // 显示时间选择器
-        if (pvTime != null) {
-            pvTime.show();
-        }
+        // 设置日期范围限制（可选）
+        // 设置最小日期为 2020年1月1日
+        Calendar minDate = Calendar.getInstance();
+        minDate.set(2020, 0, 1);
+        datePickerDialog.getDatePicker().setMinDate(minDate.getTimeInMillis());
+        
+        // 设置最大日期为 2030年12月31日
+        Calendar maxDate = Calendar.getInstance();
+        maxDate.set(2030, 11, 31);
+        datePickerDialog.getDatePicker().setMaxDate(maxDate.getTimeInMillis());
+        
+        // 显示日期选择器
+        datePickerDialog.show();
     }
 }
